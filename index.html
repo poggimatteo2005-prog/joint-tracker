@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<title>Joint Tracker</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#4CAF50">
+<style>
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #f4f4f4;
+}
+header {
+  background: #4CAF50;
+  color: white;
+  padding: 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.menu { position: relative; }
+.menu button {
+  background: none;
+  border: none;
+  font-size: 26px;
+  color: black;
+  cursor: pointer;
+}
+.menu-content {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: 40px;
+  background: white;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.3);
+}
+.menu-content button {
+  width: 100%;
+  padding: 10px;
+  border: none;
+  background: white;
+  cursor: pointer;
+}
+.menu-content button:hover { background: #eee; }
+
+.page {
+  display: none;
+  padding: 20px;
+  max-width: 900px;
+  margin: auto;
+}
+.page.active { display: block; }
+
+form, .stats {
+  background: white;
+  padding: 15px;
+  border-radius: 8px;
+}
+
+label { font-weight: bold; margin-top: 10px; display:block; }
+
+input, select, button {
+  width: 100%;
+  padding: 8px;
+  margin-top: 5px;
+}
+
+.grams-options label {
+  font-weight: normal;
+  display: flex;
+  align-items: center;
+}
+
+.grams-options input {
+  width: auto;
+  margin-right: 8px;
+}
+
+#customGrams { display: none; }
+
+button.main {
+  background: #4CAF50;
+  color: white;
+  border: none;
+  margin-top: 15px;
+}
+
+button.reset {
+  background: #e53935;
+  color: white;
+  border: none;
+  margin-top: 10px;
+}
+
+canvas {
+  background: white;
+  padding: 10px;
+  border-radius: 8px;
+  margin-top: 20px;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <h1>🌿 Joint Tracker 🍫</h1>
+  <div class="menu">
+    <button onclick="toggleMenu()">☰</button>
+    <div class="menu-content" id="menu">
+      <button onclick="showPage('add')">➕ Aggiungi J</button>
+      <button onclick="showPage('stats')">📊 Statistiche</button>
+      <button onclick="showPage('charts')">📈 <br>Grafici</button>
+    </div>
+  </div>
+</header>
+
+<!-- PAGINA 1 -->
+<div id="page-add" class="page active">
+  <form id="form">
+<h2>➕INSERISCI LE TUE J</h2>
+    <label>Tipo</label>
+    <select id="type">
+      <option value="fumo">Fumo</option>
+      <option value="erba">Erba</option>
+    </select>
+
+    <label>Quantità (g)</label>
+    <div class="grams-options">
+      <label><input type="radio" name="gramsOption" value="0.3" checked>0.3 g</label>
+      <label><input type="radio" name="gramsOption" value="0.5">0.5 g</label>
+      <label><input type="radio" name="gramsOption" value="custom">Altro</label>
+    </div>
+
+    <input type="number" id="customGrams" step="0.01" placeholder="Inserisci grammi">
+
+    <label>Data</label>
+    <input type="date" id="date">
+
+    <button class="main">Aggiungi</button>
+    <button type="button" class="reset" onclick="resetData()">Reset dati</button>
+  </form>
+</div>
+
+<!-- PAGINA 2 -->
+<div id="page-stats" class="page">
+  <div class="stats">
+<h2>📊STATISTICHE</h2>
+    <p id="totalJ"></p>
+    <p id="totalFumo"></p>
+    <p id="totalErba"></p>
+<hr>
+    <p id="dailyAvg"></p>
+    <p id="monthlyAvg"></p>
+    <p id="yearlyAvg"></p>
+    <hr>
+    <p id="dailyGramsAvg"></p>
+    <p id="monthlyGramsAvg"></p>
+    <p id="yearlyGramsAvg"></p>
+  </div>
+</div>
+
+<!-- PAGINA 3 -->
+<div id="page-charts" class="page">
+<h2>📈GRAFICI</h2>
+<hr>
+<h2>J GIORNALIERE</h2>
+  <canvas id="dailyChart"></canvas>
+<hr>
+<h2>J MENSILI</h2>
+  <canvas id="monthlyChart"></canvas>
+<hr>
+<h2>J ANNUALI</h2>
+  <canvas id="yearlyChart"></canvas>
+<hr>
+<h2>J DI SEMPRE</h2>
+  <canvas id="cumulativeChart"></canvas>
+</div>
+
+<script>
+let data = JSON.parse(localStorage.getItem("smokes")) || [];
+date.value = new Date().toISOString().split("T")[0];
+
+const totalJEl = document.getElementById("totalJ");
+const totalFumoEl = document.getElementById("totalFumo");
+const totalErbaEl = document.getElementById("totalErba");
+
+const radios = document.querySelectorAll('input[name="gramsOption"]');
+const customGrams = document.getElementById("customGrams");
+
+radios.forEach(r => {
+  r.addEventListener("change", () => {
+    customGrams.style.display =
+      r.value === "custom" && r.checked ? "block" : "none";
+    if (r.value !== "custom") customGrams.value = "";
+  });
+});
+
+function toggleMenu() {
+  menu.style.display = menu.style.display === "block" ? "none" : "block";
+}
+
+function showPage(p) {
+  document.querySelectorAll(".page").forEach(pg => pg.classList.remove("active"));
+  document.getElementById("page-" + p).classList.add("active");
+  menu.style.display = "none";
+  draw();
+}
+
+form.onsubmit = e => {
+  e.preventDefault();
+  const selected = document.querySelector('input[name="gramsOption"]:checked').value;
+  let grams = selected === "custom" ? parseFloat(customGrams.value) : parseFloat(selected);
+  if (!grams || grams <= 0) return alert("Inserisci grammi validi");
+
+  data.push({ type: type.value, grams, date: date.value });
+  localStorage.setItem("smokes", JSON.stringify(data));
+  draw();
+};
+
+function resetData() {
+  if (confirm("Cancellare tutti i dati?")) {
+    data = [];
+    localStorage.clear();
+    draw();
+  }
+}
+
+let dailyChart, monthlyChart, yearlyChart, cumulativeChart;
+
+function draw() {
+  const daily={}, monthly={}, yearly={};
+  let totalFumoCount = 0;
+  let totalErbaCount = 0;
+  let totalGrams = 0;
+
+  let cumF=[], cumE=[], labelsCum=[];
+  let rf=0, re=0;
+
+  data.sort((a,b)=>a.date.localeCompare(b.date));
+
+  data.forEach(e=>{
+    daily[e.date] ??= {fumo:0,erba:0,grams:0};
+    monthly[e.date.slice(0,7)] ??= {fumo:0,erba:0};
+    yearly[e.date.slice(0,4)] ??= {fumo:0,erba:0};
+
+    daily[e.date][e.type]++;
+    monthly[e.date.slice(0,7)][e.type]++;
+    yearly[e.date.slice(0,4)][e.type]++;
+
+    if (e.type === "fumo") { totalFumoCount++; rf++; }
+    else { totalErbaCount++; re++; }
+
+    totalGrams += e.grams;
+
+    labelsCum.push(e.date);
+    cumF.push(rf);
+    cumE.push(re);
+  });
+
+  const totalJCount = totalFumoCount + totalErbaCount;
+
+  totalJEl.innerText = "Totale J: " + totalJCount;
+  totalFumoEl.innerText = "J di fumo: " + totalFumoCount;
+  totalErbaEl.innerText = "J di erba: " + totalErbaCount;
+
+  dailyAvg.innerText =
+    "Media J giornaliera: " +
+    (totalJCount / (Object.keys(daily).length || 1)).toFixed(2);
+
+  monthlyAvg.innerText =
+    "Media J mensile: " +
+    (totalJCount / (Object.keys(monthly).length || 1)).toFixed(2);
+
+  yearlyAvg.innerText =
+    "Media J annuale: " +
+    (totalJCount / (Object.keys(yearly).length || 1)).toFixed(2);
+
+  dailyGramsAvg.innerText =
+    "Media grammi giornaliera: " +
+    (totalGrams / (Object.keys(daily).length || 1)).toFixed(2) + " g";
+
+  monthlyGramsAvg.innerText =
+    "Media grammi mensile: " +
+    (totalGrams / (Object.keys(monthly).length || 1)).toFixed(2) + " g";
+
+  yearlyGramsAvg.innerText =
+    "Media grammi annuale: " +
+    (totalGrams / (Object.keys(yearly).length || 1)).toFixed(2) + " g";
+
+  [dailyChart,monthlyChart,yearlyChart,cumulativeChart].forEach(c=>c&&c.destroy());
+
+  dailyChart = new Chart(dailyChart=document.getElementById("dailyChart"),{
+    type:"line",
+    data:{labels:Object.keys(daily),
+      datasets:[
+        {label:"J totali",data:Object.values(daily).map(d=>d.fumo+d.erba)},
+        {label:"Fumo",data:Object.values(daily).map(d=>d.fumo)},
+        {label:"Erba",data:Object.values(daily).map(d=>d.erba)}
+      ]}
+  });
+
+  monthlyChart = new Chart(document.getElementById("monthlyChart"),{
+    type:"bar",
+    data:{labels:Object.keys(monthly),
+      datasets:[
+        {label:"J totali",data:Object.values(monthly).map(m=>m.fumo+m.erba)},
+        {label:"Fumo",data:Object.values(monthly).map(m=>m.fumo)},
+        {label:"Erba",data:Object.values(monthly).map(m=>m.erba)}
+      ]}
+  });
+
+  yearlyChart = new Chart(document.getElementById("yearlyChart"),{
+    type:"bar",
+    data:{labels:Object.keys(yearly),
+      datasets:[
+        {label:"J totali",data:Object.values(yearly).map(y=>y.fumo+y.erba)},
+        {label:"Fumo",data:Object.values(yearly).map(y=>y.fumo)},
+        {label:"Erba",data:Object.values(yearly).map(y=>y.erba)}
+      ]}
+  });
+
+  cumulativeChart = new Chart(document.getElementById("cumulativeChart"),{
+    type:"line",
+    data:{labels:labelsCum,
+      datasets:[
+        {label:"Totale cumulativo",data:cumF.map((v,i)=>v+cumE[i])},
+        {label:"Fumo cumulativo",data:cumF},
+        {label:"Erba cumulativa",data:cumE}
+      ]}
+  });
+}
+
+draw();
+</script>
+
+</body>
+</html>
