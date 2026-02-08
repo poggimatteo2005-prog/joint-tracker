@@ -165,31 +165,34 @@ button.main-btn { background: var(--primary); color: white; border: none; margin
   
 
 <script>
+// Carica dati nuovi (v3) o migra vecchi da "smokes"
 let smokes = JSON.parse(localStorage.getItem("smokes_v3")) || [];
 
-// Migrazione e Inizializzazione
+// Migrazione dai dati vecchi "smokes" se v3 è vuoto
 function migrate() {
-    let v2 = JSON.parse(localStorage.getItem("smokes_v2"));
-    if(v2 && smokes.length === 0) {
-        smokes = v2.map(i => ({...i, ts: i.ts || new Date(i.date).getTime() + Math.random()}));
+    let oldData = JSON.parse(localStorage.getItem("smokes"));
+    if (oldData && smokes.length === 0) {
+        smokes = oldData.map(i => ({
+            ...i,
+            ts: i.ts || new Date(i.date).getTime() + Math.random(),
+            time: i.time || "12:00"
+        }));
         localStorage.setItem("smokes_v3", JSON.stringify(smokes));
+        console.log("Dati migrati da smokes a smokes_v3");
     }
 }
 
+// Pulizia vecchie fumate con time "12:00" prima di una certa data
 const ORARIO_INTRODOTTO_IL = new Date("2026-02-08").getTime();
 function fixOldFakeTimes() {
-
-    const ORARIO_INTRODOTTO_IL = new Date("2026-02-08").getTime(); // <-- metti la tua data reale
     let changed = false;
 
     smokes = smokes.map(s => {
-
         if (s.ts < ORARIO_INTRODOTTO_IL && s.time === "12:00") {
             const { time, ...rest } = s;
             changed = true;
             return rest; // rimuove il time solo se è vecchia
         }
-
         return s;
     });
 
@@ -199,8 +202,10 @@ function fixOldFakeTimes() {
     }
 }
 
+// Esegui migrazione e pulizia all'avvio
 migrate();
 fixOldFakeTimes();
+
 
 
 
