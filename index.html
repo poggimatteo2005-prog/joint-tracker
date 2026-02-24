@@ -4,6 +4,15 @@
 <meta charset="UTF-8">
 <title>Joint Tracker Analytics</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+	<script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+<script>
+  window.OneSignalDeferred = window.OneSignalDeferred || [];
+  OneSignalDeferred.push(async function(OneSignal) {
+    await OneSignal.init({
+      appId: "018ef99a-d4fa-488b-9ac9-4e00c2f960b3",
+    });
+  });
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
 :root { --primary: #2e7d32; --bg: #f4f7f6; --white: #ffffff; }
