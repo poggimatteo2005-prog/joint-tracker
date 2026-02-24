@@ -69,6 +69,7 @@ button.main-btn { background: var(--primary); color: white; border: none; margin
     <button onclick="showPage('history')">📜 Cronologia</button>
     <button onclick="showPage('stats')">📊 Statistiche</button>
     <button onclick="showPage('charts')">📈 Dashboard</button>
+<button onclick="showPage('settings')">⚙️ Settings</button>
   </div>
 </header>
 
@@ -102,6 +103,23 @@ button.main-btn { background: var(--primary); color: white; border: none; margin
   </div>
 </div>
 
+
+	<div id="page-settings" class="page">
+  <div class="card">
+    <h3>⚙️ Impostazioni</h3>
+<button onclick="exportData()">📤 Esporta Dati</button>
+<input type="file" id="importFile" style="display:none" onchange="importData(event)">
+<div>
+  <h3>📥 Importa Dati</h3>
+  <textarea id="importArea" style="width:100%; height:200px;" placeholder="Incolla qui il backup JSON"></textarea>
+  <button onclick="importData()">Importa</button>
+</div>
+	  <div>
+		  <button onclick="resetAll()" style="background:none; border:none; color:red; width:100%; margin-top:20px; font-size:12px; cursor:pointer;">⚠️ Reset completo dati</button>
+	  </div>
+  </div>
+</div>
+
 <div id="page-stats" class="page">
   <div class="card">
     <h3>Quantità Totali</h3>
@@ -127,8 +145,7 @@ button.main-btn { background: var(--primary); color: white; border: none; margin
     </div>
 </div>
     <p style="font-size:11px; color:#999; text-align:center;">*Il calcolo parte dalla tua prima J inserita.(<span id="diffDays">0</span> giorni fà)</p>
-
-    <button onclick="resetAll()" style="background:none; border:none; color:red; width:100%; margin-top:20px; font-size:12px; cursor:pointer;">⚠️ Reset completo dati</button>
+	
   </div>
 </div>
 
@@ -526,6 +543,61 @@ smokes.forEach(s => {
     });
 }
 
+
+	
+    // ==========================
+    // EXPORTDATA
+    // ==========================
+
+	function exportData() {
+    const data = localStorage.getItem("smokes_v3");
+    const best = localStorage.getItem("bestStreak");
+
+    if (!data) {
+        alert("Nessun dato da esportare");
+        return;
+    }
+
+    const fullBackup = {
+        smokes_v3: JSON.parse(data),
+        bestStreak: best
+    };
+
+    const blob = new Blob(
+        [JSON.stringify(fullBackup, null, 2)],
+        { type: "application/json" }
+    );
+
+    const url = URL.createObjectURL(blob);
+
+    // Metodo compatibile iOS
+    window.open(url, "_blank");
+}
+
+function importData() {
+    const json = document.getElementById("importArea").value.trim();
+    if(!json) return alert("Incolla il backup JSON prima di importare!");
+
+    try {
+        const backup = JSON.parse(json);
+
+        if(!backup.smokes_v3) return alert("Backup non valido!");
+
+        localStorage.setItem("smokes_v3", JSON.stringify(backup.smokes_v3));
+        if(backup.bestStreak) localStorage.setItem("bestStreak", backup.bestStreak);
+
+        alert("Dati importati correttamente!");
+        location.reload();
+    } catch(e) {
+        alert("Errore nel JSON: controlla di aver copiato tutto correttamente!");
+        console.error(e);
+    }
+}
+
+	
+    // ==========================
+    // RESETALL
+    // ==========================
 function resetAll() { if(confirm("ATTENZIONE: Questo cancellerà TUTTA la tua cronologia. Sei sicuro?")) { localStorage.clear(); location.reload(); } }
 
 update();
